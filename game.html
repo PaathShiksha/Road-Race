@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Road Race</title>
+    <style>
+
+        *{
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;        
+        }
+        .hide{
+            display: none;
+        }
+        .Bike{
+            width: 50px;
+            height: 100px;
+            position: absolute;
+            bottom: 120px;
+            background-image: url(Bike.png);
+            background-size: cover;
+        }
+        .GameArea{
+            width: 400px;
+            height: 100vh;
+            background-color: rgb(29, 26, 26);
+            margin: auto;
+            position: relative;
+            overflow: hidden;
+            border-left: 10px dashed white;
+            border-right:10px dashed white;
+        }
+        .lines{
+            width: 10px;
+            height: 100px;
+            background: white;
+            position: absolute;
+            margin-left: 195px; 
+        }
+        .BikeGame{
+            background-color: black;
+
+        }
+        .other{
+
+            width: 50px;
+            height: 100px;
+            position: absolute;
+            bottom: 120px;
+            background-image: url(car.png);
+            background-size: cover;
+        }
+        .Score{
+            position: absolute;
+            top: 5px;
+            left: 50px;
+            padding: 23px;
+            font-size: 20px;
+            line-height: 15px;
+            background-color: teal;
+            color: white;
+            width: 420px;
+            height: 75px;
+            box-shadow: 0 0 20px 0px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            z-index: 10;
+        }
+
+        .Level {
+            position: absolute;
+            top: 5px;
+            right: 50px;
+            padding: 23px;
+            font-size: 20px;
+            line-height: 15px;
+            background-color: teal;
+            color: white;
+            width: 420px;
+            height: 75px;
+            box-shadow: 0 0 20px 0px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            z-index: 10;
+        }
+
+        .backgroundLeft{
+            top: 80px;
+            position: absolute;
+            left: 2px;
+            padding-top: 23px;
+            /* background-color: rgba(18, 54, 8, 0.952); */
+            background: white url("backgroundImage.gif") no-repeat scroll center;
+            background-size: cover;
+            width: 500px;
+            height: 570px;
+            display: flex;
+
+        }
+
+        .backgroundRight{
+            top: 80px;
+            position: absolute;
+            right: 2px;
+            padding-top: 23px;
+            /* background-color: rgba(18, 54, 8, 0.952); */
+            background: white url("backgroundImage.gif") no-repeat scroll center;
+            background-size: cover;
+            width: 500px;
+            height: 570px;
+            display: flex;
+
+        }
+        .StartScreen{
+            position: absolute;
+            background-color: rgba(34, 119, 8, 0.952);
+            color: white;
+            z-index: 1;
+            margin-top: 210px;
+            margin-left:360px;
+            text-align: center;
+            box-shadow: 0 0 20px 0px rgba(0,0,0,0.1);
+            font-size: 30px;
+            width: 50%;
+            height: 200px;
+            cursor: pointer;
+            border-radius: 23px;
+
+        }
+        button{
+            padding: 10px;
+            text-align: center;
+            background-color: black;
+            color: white;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Audio elements -->
+    <audio id="backgroundMusic" src="backgroundMusic.wav" loop autoplay></audio>
+    <audio id="collisionSound" src="collision_sound.mp3"></audio>
+    <audio id="scoreSound" src="score_sound.mp3"></audio>
+    <audio id="accelerationSound" src="acceleration_sound.mp3"></audio>
+
+    <!-- Rest of your HTML content -->
+    <div class="BikeGame">
+        <div class="Score">Score: <span id="currentScore">0</span></div>
+        <div class="Level">Level: <span id="currentLevel">1</span></div>
+        <div class="backgroundLeft"></div>
+        <div class="backgroundRight"></div>
+        <div class="StartScreen">
+            <p>Start Game by clicking Here<br><br>Arrow Keys to move<br><br>If you hit another car you will lose</p>
+            <button onclick="Reset()">Reset Highest Score</button>
+        </div>
+        <div class="GameArea"></div>
+    </div>
+
+    <script>
+        const backgroundMusic = document.getElementById('backgroundMusic');
+        const collisionSound = document.getElementById('collisionSound');
+        const scoreSound = document.getElementById('scoreSound');
+        const accelerationSound = document.getElementById('accelerationSound');
+    
+        const score = document.getElementById('currentScore');
+        const level = document.getElementById('currentLevel');
+        const startscreen = document.querySelector('.StartScreen');
+        const gamearea = document.querySelector('.GameArea');
+        let player = { speed: 5, score: 0 };
+        let highest = 0;
+        let currentLevel = 1; // Start at level 1
+        let gameover = false;
+    
+        startscreen.addEventListener('click', start);
+    
+        let keys = { ArrowUp: false, ArrowDown: false, ArrowRight: false, ArrowLeft: false };
+    
+        document.addEventListener('keydown', keyDown);
+        document.addEventListener('keyup', keyUp);
+    
+        function keyDown(ev) {
+            ev.preventDefault();
+            keys[ev.key] = true;
+            if (ev.key === 'ArrowUp') {
+                playAccelerationSound();
+            }
+        }
+    
+        function keyUp(ev) {
+            ev.preventDefault();
+            keys[ev.key] = false;
+        }
+    
+        function isCollide(a, b) {
+            aRect = a.getBoundingClientRect();
+            bRect = b.getBoundingClientRect();
+    
+            return !((aRect.bottom < bRect.top) || (aRect.top > bRect.bottom) || (aRect.right < bRect.left) || (aRect.left > bRect.right));
+        }
+    
+        function moveLines() {
+            let lines = document.querySelectorAll('.lines');
+            lines.forEach(function (item) {
+                if (item.y >= 700) {
+                    item.y -= 750;
+                }
+                item.y += player.speed;
+                item.style.top = item.y + 'px';
+            })
+        }
+    
+        function endGame() {
+            player.start = false;
+            gameover = true;
+            backgroundMusic.pause(); // Pause the background music
+            accelerationSound.pause(); // Pause the acceleration music
+            startscreen.classList.remove('hide');
+        }
+    
+        function moveBike(Bike) {
+            let other = document.querySelectorAll('.other');
+            other.forEach(function (item) {
+                if (isCollide(Bike, item)) {
+                    console.log('HIT');
+                    playCollisionSound();
+                    endGame();
+                }
+                if (item.y >= 750) {
+                    item.y = -300;
+                    item.style.left = Math.floor(Math.random() * 350) + 'px';
+                }
+                item.y += player.speed;
+                item.style.top = item.y + 'px';
+            })
+        }
+    
+        function gamePlay() {
+            let Bike = document.querySelector('.Bike');
+            let road = gamearea.getBoundingClientRect();
+    
+            if (player.start) {
+                moveLines();
+                moveBike(Bike);
+                if (keys.ArrowUp && player.y > (road.top + 70)) {
+                    player.y -= player.speed;
+                }
+                if (keys.ArrowDown && player.y < (road.bottom - 70)) {
+                    player.y += player.speed;
+                }
+                if (keys.ArrowLeft && player.x > 0) {
+                    player.x -= player.speed;
+                }
+                if (keys.ArrowRight && player.x < (road.width - 50)) {
+                    player.x += player.speed;
+                }
+    
+                Bike.style.top = player.y + 'px';
+                Bike.style.left = player.x + 'px';
+    
+                window.requestAnimationFrame(gamePlay);
+                player.score++;
+                score.textContent = player.score;
+                updateLevel();
+            }
+        }
+    
+        function Reset() {
+            highest = 0;
+        }
+    
+        function start() {
+            startscreen.classList.add('hide');
+            gamearea.innerHTML = "";
+    
+            player.start = true;
+            player.score = 0;
+            currentLevel = 1; // Reset to level 1
+            level.textContent = currentLevel; // Update level display
+            player.speed = 5; // Reset player speed
+            gameover = false;
+            backgroundMusic.play(); // Start the background music
+    
+            window.requestAnimationFrame(gamePlay);
+    
+            for (x = 0; x < 5; x++) {
+                let roadline = document.createElement('div');
+                roadline.setAttribute('class', 'lines');
+                roadline.y = (x * 150);
+                roadline.style.top = roadline.y + 'px';
+                gamearea.appendChild(roadline);
+            }
+    
+            let Bike = document.createElement('div');
+            Bike.setAttribute('class', 'Bike');
+            gamearea.appendChild(Bike);
+    
+            player.x = Bike.offsetLeft;
+            player.y = Bike.offsetTop;
+    
+            for (x = 0; x < 3; x++) {
+                let otherBike = document.createElement('div');
+                otherBike.setAttribute('class', 'other');
+                otherBike.y = ((x + 1) * 350) * -1;
+                otherBike.style.top = otherBike.y + 'px';
+                otherBike.style.left = Math.floor(Math.random() * 350) + 'px';
+                gamearea.appendChild(otherBike);
+            }
+        }
+    
+        function playCollisionSound() {
+            collisionSound.play();
+        }
+    
+        function playScoreSound() {
+            scoreSound.play();
+        }
+    
+        function playAccelerationSound() {
+            accelerationSound.play();
+        }
+    
+        function updateLevel() {
+            // Check if the player meets the criteria to progress to the next level
+            player.score += 1;
+            if (player.score % 500 === 0) { // Increase level every 500 score
+                currentLevel++;
+                player.speed++;
+                level.textContent = currentLevel;
+            }
+        }
+    
+        // Stop all audio elements when the game ends
+        function stopAllAudio() {
+            backgroundMusic.pause();
+            collisionSound.pause();
+            scoreSound.pause();
+            accelerationSound.pause();
+        }
+    
+        // Event listener to stop audio when the window is closed
+        window.addEventListener('beforeunload', function(event) {
+            if (!gameover) {
+                stopAllAudio();
+            }
+        });
+    </script>
+    
+</body>
+</html>
